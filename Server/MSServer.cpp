@@ -151,7 +151,7 @@ void communication(SOCKET ClientSocket) {
         ZeroMemory(recvbuf, sizeof(recvbuf));
         iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
         if (iResult > 0) {
-            printf("%d: %s (%d Bytes)\n", ResolveAddress(ClientSocket.), recvbuf, iResult);
+            printf("%d: %s (%d Bytes)\n", id, recvbuf, iResult);
 
             // Echo the buffer back to the sender
             for (int i = 0; i < ClientCounter; i++) {
