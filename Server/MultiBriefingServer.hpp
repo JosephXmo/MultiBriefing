@@ -1,46 +1,24 @@
-#undef UNICODE
+// Include system library needed
+#include "SystemDependency.hpp"
 
-#define WIN32_LEAN_AND_MEAN
+// Include common types
+#include "MultiBriefingTypes.hpp"
 
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <stdlib.h>
-#include <stdio.h>
+// Save config macro definitions in another file for simpler management
+#include "ServerConfigs.hpp"
 
-// Need to link with Ws2_32.lib
-#pragma comment (lib, "Ws2_32.lib")
+// Include utilities
+#include "SocketLinkedList.hpp"
+#include "MBUtils.hpp"
+#define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000) 
 
-#define MAX_CONN 10
-
-#define DEFAULT_BUFLEN 512
-#define DEFAULT_PORT "27015"
-
+// Public variables
 int ClientCounter = 0;
 SOCKET ClientSockets[MAX_CONN];
-
-struct MBMessage {
-	MBClient client;
-	SYSTEMTIME timestamp;
-	char* message;
-};
-
-struct MBClient {
-	char* nickname;
-	SOCKET Socket;
-};
-
-struct SimpleAddress {
-    char* address;
-    short port;
-};
 
 // Application Entrance
 int __cdecl main(void);
 
 // Functional process
 int FullConnectReject(SOCKET ClientCSocket);
-void communication(SOCKET ClientSocket);
-
-// Utilities
-SimpleAddress* ResolveAddress(SOCKADDR* ParsedAddress);
+void communication(MBClient* Client);

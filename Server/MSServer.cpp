@@ -11,8 +11,6 @@ int __cdecl MSServer(void)
     struct addrinfo* result = NULL;
     struct addrinfo hints;
 
-    int iSendResult;
-
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
@@ -69,7 +67,12 @@ int __cdecl MSServer(void)
     do {
         // Server reaches maximum connection limit
         if (ClientCounter == MAX_CONN) {
-            int rejRet = FullConnectReject(accept(ListenSocket, NULL, NULL));
+            CreateThread(
+                NULL, NULL,
+                (LPTHREAD_START_ROUTINE)FullConnectReject,
+                (LPVOID)accept(ListenSocket, NULL, NULL),
+                NULL, NULL
+            );
             continue;
         }
 
@@ -86,13 +89,19 @@ int __cdecl MSServer(void)
         }
         ClientSockets[ClientCounter++] = ClientSocket;
 
+        // Create MBClient Object
+        SYSTEMTIME CurrentTime; GetSystemTime(&CurrentTime);
+        MBClient Client{ GenRandByTime(), Client.socket = ClientSocket };
+
         // Report client connection & information
         SOCKADDR TargetAddress;
         int TargetAddrLen = sizeof(TargetAddress);
         if (getpeername(ClientSocket, &TargetAddress, &TargetAddrLen) == 0) {
             SimpleAddress* saTargetAddress = ResolveAddress(&TargetAddress);
+
             if (saTargetAddress != nullptr) {
-                printf("Client connection from: %s\n\tTotal connections: %d\n\n", saTargetAddress->address, ClientCounter);
+                printf("Client connection from: %s\n", saTargetAddress->address);
+                ReportClientCounter(ClientCounter);
             }
             else printf("WARNING: Address version is neither v4 nor v6. Unidentified address family!\n");
         }
@@ -101,7 +110,7 @@ int __cdecl MSServer(void)
         CreateThread(
             NULL, NULL,
             (LPTHREAD_START_ROUTINE)communication,
-            (LPVOID)ClientSocket,
+            (LPVOID)&Client,
             NULL, NULL
         );
         printf("Waiting for client connection...\n\n");
@@ -141,7 +150,7 @@ int FullConnectReject(SOCKET ClientSocket) {
     return iSendResult;
 }
 
-void communication(SOCKET ClientSocket) {
+void communication(MBClient* Client) {
     int iResult, iSendResult;
     char recvbuf[DEFAULT_BUFLEN];
     int recvbuflen = DEFAULT_BUFLEN;
@@ -149,16 +158,16 @@ void communication(SOCKET ClientSocket) {
     // Receive until the peer shuts down the connection
     do {
         ZeroMemory(recvbuf, sizeof(recvbuf));
-        iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
+        iResult = recv(Client->socket, recvbuf, recvbuflen, 0);
         if (iResult > 0) {
-            printf("%d: %s (%d Bytes)\n", id, recvbuf, iResult);
+            printf("%ld: %s (%d Bytes)\n", Client->id, recvbuf, iResult);
 
             // Echo the buffer back to the sender
             for (int i = 0; i < ClientCounter; i++) {
                 iSendResult = send(ClientSockets[i], recvbuf, iResult, 0);
                 if (iSendResult == SOCKET_ERROR) {
                     printf("send failed with error: %d\n", WSAGetLastError());
-                    closesocket(ClientSockets[i]);
+                    closesocket(Client->socket);
                 }
             }
             printf("Echoed %d Bytes to %d clients.\n\n", iSendResult, ClientCounter);
@@ -166,31 +175,13 @@ void communication(SOCKET ClientSocket) {
         else if (iResult == 0) {
             printf("Connection closing...\n");
             ClientCounter--;
+            ReportClientCounter(ClientCounter);
         }
         else {
             printf("recv failed with error: %d\n", WSAGetLastError());
-            closesocket(ClientSockets[id]);
+            closesocket(Client->socket);
+            // TODO: Complete client list pop-off mechanism
+            ReportClientCounter(ClientCounter);
         }
     } while (iResult > 0);
-}
-
-SimpleAddress* ResolveAddress(SOCKADDR* ParsedAddress) {
-    int TargetAddrLen = sizeof(ParsedAddress);
-    SimpleAddress* RetAddress = (SimpleAddress*)malloc(sizeof(SimpleAddress));
-
-    if (ParsedAddress->sa_family == AF_INET) {
-        RetAddress->address = (char*)malloc(INET_ADDRSTRLEN * sizeof(char));
-        SOCKADDR_IN* v4 = (SOCKADDR_IN*)ParsedAddress;
-        inet_ntop(AF_INET, &v4->sin_addr, RetAddress->address, INET_ADDRSTRLEN * sizeof(char));
-        RetAddress->port = ntohs(v4->sin_port);
-        return RetAddress;
-    }
-    else if (ParsedAddress->sa_family == AF_INET6) {
-        RetAddress->address = (char*)malloc(INET6_ADDRSTRLEN * sizeof(char));
-        SOCKADDR_IN6* v6 = (SOCKADDR_IN6*)ParsedAddress;
-        inet_ntop(AF_INET6, &v6->sin6_addr, RetAddress->address, INET6_ADDRSTRLEN * sizeof(char));
-        RetAddress->port = ntohs(v6->sin6_port);
-        return RetAddress;
-    }
-    else return nullptr;
 }

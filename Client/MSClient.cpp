@@ -97,6 +97,7 @@ int __cdecl MSClient(void)
     }
 
     printf("Message Sent: %s (%ld Bytes)\n", sendbuf, iResult);
+    while (1);
     //HANDLE hLogFile = CreateFile(
     //    "MBLog.log",
     //    GENERIC_READ | GENERIC_WRITE,
@@ -119,11 +120,9 @@ int __cdecl MSClient(void)
 
     // Receive until the peer closes the connection
     do {
-
         iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
         if (iResult > 0) {
             printf("%d Bytes: Server Received\n\n", iResult);
-            while (1);
         }
         else if (iResult == 0)
             printf("Connection closed\n");

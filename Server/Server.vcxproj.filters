@@ -21,9 +21,30 @@
     <ClCompile Include="ServerLaunch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="SocketLinkedList.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MBUtils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MultiBriefingServer.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketLinkedList.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerConfigs.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiBriefingTypes.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MBUtils.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemDependency.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
