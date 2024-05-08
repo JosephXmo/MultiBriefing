@@ -128,7 +128,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ClientLaunch.cpp" />
-    <ClCompile Include="ConsoleRenderer.cpp" />
     <ClCompile Include="MSClient.cpp" />
   </ItemGroup>
   <ItemGroup>

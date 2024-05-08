@@ -21,9 +21,6 @@
     <ClCompile Include="MSClient.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ConsoleRenderer.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MultiBriefingClient.hpp">
