@@ -4,6 +4,29 @@ void ReportClientCounter(int ClientCounter) {
     printf("\tTotal connections: %d\n\n", ClientCounter);
 }
 
+void Announcement(MBClientsRegTable* ClientsTable, char* Msg) {
+    int iSendResult;
+
+    // Echo the buffer to all connected clients
+    int ForwardCounter = 0;
+    for (int i = 0; i < MAX_CONN; i++) {
+        if (ClientsTable->table[i] == nullptr) continue;
+
+        char sendbuf[DEFAULT_BUFLEN];
+        ZeroMemory(sendbuf, DEFAULT_BUFLEN * sizeof(char));
+        sprintf_s(
+            sendbuf, DEFAULT_BUFLEN,
+            "!Announcement!\n%s",
+            Msg
+        );
+
+        iSendResult = send(ClientsTable->table[i]->socket, sendbuf, (int)strlen(sendbuf), 0);
+        if (iSendResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
+        else ForwardCounter++;
+    }
+    printf("Echoed to %d clients.\n\n", ForwardCounter);
+}
+
 SimpleAddress* ResolveAddress(SOCKADDR* ParsedAddress) {
     int TargetAddrLen = sizeof(ParsedAddress);
     SimpleAddress* RetAddress = (SimpleAddress*)malloc(sizeof(SimpleAddress));

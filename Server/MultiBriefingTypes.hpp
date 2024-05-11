@@ -21,3 +21,8 @@ struct MBClientsRegTable {
 	int counter = 0;
 	MBClient* table[MAX_CONN] = { nullptr };
 };
+
+struct SimpleAddress {
+	char* address;
+	short port;
+};

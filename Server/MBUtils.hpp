@@ -3,12 +3,9 @@
 #include "SystemDependency.hpp"
 #include "MultiBriefingTypes.hpp"
 
-struct SimpleAddress {
-	char* address;
-	short port;
-};
-
 void ReportClientCounter(int ClientCounter);
+
+void Announcement(MBClientsRegTable* ClientsTable, char* Msg);
 
 SimpleAddress* ResolveAddress(SOCKADDR* ParsedAddress);
 

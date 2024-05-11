@@ -22,7 +22,7 @@ struct Client
     int fd_id;               // user ID number
     SOCKET socket;           // socket to this user
     char name[NAME_LEN + 1]; // name of the user
-    HANDLE recv_thread;      // thread for receiving messages
+    HANDLE recv_thread;      // thread for receiving messagesxxxxxxxd
     HANDLE send_thread;      // thread for sending messages
 } client[MAX_CLIENT_NUM] = { 0 };
 

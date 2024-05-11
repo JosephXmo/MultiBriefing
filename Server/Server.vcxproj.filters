@@ -30,14 +30,8 @@
     <ClInclude Include="ServerConfigs.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="SocketLinkedList.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SocketLinkedList.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="MBUtils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

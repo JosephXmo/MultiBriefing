@@ -81,6 +81,7 @@ int __cdecl MSClient(void)
     ZeroMemory(name, (MAX_NAME + 1) * sizeof(char));
     std::cout << "Name: ";
     std::cin >> name;
+    getc(stdin);
     iResult = send(ConnectSocket, name, (int)strlen(name), 0);
     if (iResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
     recv(ConnectSocket, name, MAX_NAME, 0);
@@ -123,7 +124,7 @@ void Sender(SOCKET* ArgSocket) {
 
     while (finFlag) {
         std::cout << name << "> ";
-        std::cin >> sendbuf;
+        gets_s(sendbuf);
 
         finFlag = strcmp(sendbuf, "/quit");
         if (!finFlag) break;
@@ -136,10 +137,12 @@ void Sender(SOCKET* ArgSocket) {
             ReleaseMutex(ConsoleD);
         }
 
-        WaitForSingleObject(ConsoleD, INFINITE);
-        printf("Message Sent: %s (%ld Bytes)\n", sendbuf, iResult);
+        // WaitForSingleObject(ConsoleD, INFINITE);
+        // printf("Message Sent: %s (%ld Bytes)\n", sendbuf, iResult);
         // Log((char*) sendbuf);
-        ReleaseMutex(ConsoleD);
+        // ReleaseMutex(ConsoleD);
+
+        ZeroMemory(sendbuf, sizeof(sendbuf));
     }
 
     // shutdown the connection to prepare for program termination
@@ -162,12 +165,11 @@ void Receiver(SOCKET* ArgSocket) {
     while ((iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0)) > 0) {
         if (iResult > 0) {
             WaitForSingleObject(ConsoleD, INFINITE);
-            printf("\n");
-            printf("%s (%d Bytes)", recvbuf, iResult);
-            printf("\n");
+            printf("\n\n%s\n\n", recvbuf);
             printf("%s> ", name);
             ReleaseMutex(ConsoleD);
         }
+        ZeroMemory(recvbuf, sizeof(recvbuf));
     }
 
     if (iResult < 0) {
@@ -178,4 +180,5 @@ void Receiver(SOCKET* ArgSocket) {
 
     WaitForSingleObject(ConsoleD, INFINITE);
     printf("Connection closed\n");
-    ReleaseMutex(ConsoleD);}
+    ReleaseMutex(ConsoleD);
+}
