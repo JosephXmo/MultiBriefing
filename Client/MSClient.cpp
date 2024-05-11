@@ -2,7 +2,6 @@
 
 char name[MAX_NAME + 1];
 HANDLE ConsoleD;
-bool ConsoleRefreshed = false;
 
 int __cdecl MSClient(void)
 {
@@ -109,8 +108,9 @@ int __cdecl MSClient(void)
     // cleanup
     closesocket(ConnectSocket);
     WSACleanup();
-    // CloseHandle(ConsoleD);
-    CloseHandle(Transceiver);
+    CloseHandle(ConsoleD);
+    CloseHandle(Transceiver[0]);
+    CloseHandle(Transceiver[1]);
 
     return 0;
 }
@@ -130,15 +130,25 @@ void Sender(SOCKET* ArgSocket) {
 
         // Send message buffer
         iResult = send(ConnectSocket, sendbuf, (int)strlen(sendbuf), 0);
-        if (iResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
+        if (iResult == SOCKET_ERROR) {
+            WaitForSingleObject(ConsoleD, INFINITE);
+            printf("send failed with error: %d\n", WSAGetLastError());
+            ReleaseMutex(ConsoleD);
+        }
 
+        WaitForSingleObject(ConsoleD, INFINITE);
         printf("Message Sent: %s (%ld Bytes)\n", sendbuf, iResult);
         // Log((char*) sendbuf);
+        ReleaseMutex(ConsoleD);
     }
 
     // shutdown the connection to prepare for program termination
     iResult = shutdown(ConnectSocket, SD_BOTH);
-    if (iResult == SOCKET_ERROR) printf("shutdown failed with error: %d\n", WSAGetLastError());
+    if (iResult == SOCKET_ERROR) {
+        WaitForSingleObject(ConsoleD, INFINITE);
+        printf("shutdown failed with error: %d\n", WSAGetLastError());
+        ReleaseMutex(ConsoleD);
+    }
 }
 
 void Receiver(SOCKET* ArgSocket) {
@@ -151,14 +161,21 @@ void Receiver(SOCKET* ArgSocket) {
     ZeroMemory(recvbuf, sizeof(recvbuf));
     while ((iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0)) > 0) {
         if (iResult > 0) {
+            WaitForSingleObject(ConsoleD, INFINITE);
             printf("\n");
             printf("%s (%d Bytes)", recvbuf, iResult);
             printf("\n");
+            printf("%s> ", name);
+            ReleaseMutex(ConsoleD);
         }
-        ConsoleRefreshed = true;
     }
 
-    if (iResult < 0) printf("\trecv failed with error: %d\n", WSAGetLastError());
+    if (iResult < 0) {
+        WaitForSingleObject(ConsoleD, INFINITE);
+        printf("\trecv failed with error: %d\n", WSAGetLastError());
+        ReleaseMutex(ConsoleD);
+    }
 
+    WaitForSingleObject(ConsoleD, INFINITE);
     printf("Connection closed\n");
-}
+    ReleaseMutex(ConsoleD);}

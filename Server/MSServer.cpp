@@ -215,13 +215,14 @@ void Communication(MBClient* Client) {
             printf("%s: %s (%d Bytes)\n", Client->name, recvbuf, iResult);
 
             // Echo the buffer to all connected clients
-            for (int i = 0; i < MAX_CONN && ClientsTable.table[i] != nullptr; i++) {
-                if (ClientsTable.table[i]->id == Client->id) continue;
+            int ForwardCounter = 0;
+            for (ForwardCounter = 0; ForwardCounter < MAX_CONN && ClientsTable.table[ForwardCounter] != nullptr; ForwardCounter++) {
+                // if (ClientsTable.table[ForwardCounter]->id == Client->id) continue;
 
-                iSendResult = send(ClientsTable.table[i]->socket, recvbuf, iResult, 0);
+                iSendResult = send(ClientsTable.table[ForwardCounter]->socket, recvbuf, iResult, 0);
                 if (iSendResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
             }
-            printf("Echoed %d Bytes to %d clients.\n\n", iSendResult, ClientsTable.counter);
+            printf("Echoed to %d clients.\n\n", ForwardCounter);
         }
         else if (iResult == 0) {
             printf("Connection closing...\n");
