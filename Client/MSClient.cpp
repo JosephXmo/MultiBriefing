@@ -1,16 +1,20 @@
 ﻿#include "MultiBriefingClient.hpp"
 
+char name[MAX_NAME + 1];
+HANDLE ConsoleD;
+bool ConsoleRefreshed = false;
+
 int __cdecl MSClient(void)
 {
     WSADATA wsaData;
     SOCKET ConnectSocket = INVALID_SOCKET;
+    HANDLE ConsoleD = CreateMutex(NULL, FALSE, "Console Print Daemon");
+
     struct addrinfo* result = NULL,
         * ptr = NULL,
         hints;
-    const char* sendbuf = "this is a test";
-    char recvbuf[DEFAULT_BUFLEN];
+
     int iResult;
-    int recvbuflen = DEFAULT_BUFLEN;
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -72,89 +76,89 @@ int __cdecl MSClient(void)
         if (saConnectAddress != nullptr) {
             printf("Connected to server: %s\n\n", saConnectAddress->address);
         }
-        //if (ConnectAddress.sa_family == AF_INET) {
-        //    SOCKADDR_IN* v4 = (SOCKADDR_IN*)&ConnectAddress;
-        //    char v4String[INET_ADDRSTRLEN];
-        //    inet_ntop(AF_INET, &v4->sin_addr, v4String, sizeof(v4String));
-        //    printf("Connected to client: %s:%s\n\n", v4String, DEFAULT_PORT);
-        //}
-        //else if (ConnectAddress.sa_family == AF_INET6) {
-        //    SOCKADDR_IN6* v6 = (SOCKADDR_IN6*)&ConnectAddress;
-        //    char v6String[INET6_ADDRSTRLEN];
-        //    inet_ntop(AF_INET6, &v6->sin6_addr, v6String, sizeof(v6String));
-        //    printf("Connected to client: %s:%s\n\n", v6String, DEFAULT_PORT);
-        //}
         else printf("WARNING: Address version is neither v4 nor v6. Unidentified address family!\n");
     }
 
-    // Send message buffer
-    iResult = send(ConnectSocket, sendbuf, (int)strlen(sendbuf), 0);
-    if (iResult == SOCKET_ERROR) {
-        printf("send failed with error: %d\n", WSAGetLastError());
-        closesocket(ConnectSocket);
-        WSACleanup();
-        return 1;
-    }
+    ZeroMemory(name, (MAX_NAME + 1) * sizeof(char));
+    std::cout << "Name: ";
+    std::cin >> name;
+    iResult = send(ConnectSocket, name, (int)strlen(name), 0);
+    if (iResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
+    recv(ConnectSocket, name, MAX_NAME, 0);
+    std::cout << "Your name is: " << name << std::endl << std::endl;
+    fflush(stdin);
+    fflush(stdout);
 
-    printf("Message Sent: %s (%ld Bytes)\n", sendbuf, iResult);
-    while (1);
-    //HANDLE hLogFile = CreateFile(
-    //    "MBLog.log",
-    //    GENERIC_READ | GENERIC_WRITE,
-    //    FILE_SHARE_READ,
-    //    NULL,
-    //    CREATE_NEW,
-    //    FILE_APPEND_DATA,
-    //    NULL
-    //);
-    //WriteFile(hLogFile, NULL, NULL, nullptr, nullptr);
+    HANDLE Transceiver[2];
 
-    // shutdown the connection since no more data will be sent
-    iResult = shutdown(ConnectSocket, SD_SEND);
-    if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed with error: %d\n", WSAGetLastError());
-        closesocket(ConnectSocket);
-        WSACleanup();
-        return 1;
-    }
+    Transceiver[0] = CreateThread(
+        NULL, NULL,
+        (LPTHREAD_START_ROUTINE)Sender,
+        (LPVOID)&ConnectSocket,
+        NULL, NULL
+    );
+    Transceiver[1] = CreateThread(
+        NULL, NULL,
+        (LPTHREAD_START_ROUTINE)Receiver,
+        (LPVOID)&ConnectSocket,
+        NULL, NULL
+    );
 
-    // Receive until the peer closes the connection
-    do {
-        iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
-        if (iResult > 0) {
-            printf("%d Bytes: Server Received\n\n", iResult);
-        }
-        else if (iResult == 0)
-            printf("Connection closed\n");
-        else
-            printf("recv failed with error: %d\n", WSAGetLastError());
-
-    } while (iResult > 0);
+    WaitForMultipleObjects(2, Transceiver, TRUE, INFINITE);
 
     // cleanup
     closesocket(ConnectSocket);
     WSACleanup();
+    // CloseHandle(ConsoleD);
+    CloseHandle(Transceiver);
 
     return 0;
 }
 
-SimpleAddress* ResolveAddress(SOCKADDR* ParsedAddress) {
-    int TargetAddrLen = sizeof(ParsedAddress);
-    SimpleAddress* RetAddress = (SimpleAddress*) malloc(sizeof(SimpleAddress));
+void Sender(SOCKET* ArgSocket) {
+    int iResult;
+    char sendbuf[DEFAULT_BUFLEN];
+    bool finFlag = 1;
+    SOCKET ConnectSocket = *ArgSocket;
 
-    if (ParsedAddress->sa_family == AF_INET) {
-        RetAddress->address = (char*)malloc(INET_ADDRSTRLEN * sizeof(char));
-        SOCKADDR_IN* v4 = (SOCKADDR_IN*)ParsedAddress;
-        inet_ntop(AF_INET, &v4->sin_addr, RetAddress->address, INET_ADDRSTRLEN * sizeof(char));
-        RetAddress->port = ntohs(v4->sin_port);
-        return RetAddress;
+    while (finFlag) {
+        std::cout << name << "> ";
+        std::cin >> sendbuf;
+
+        finFlag = strcmp(sendbuf, "/quit");
+        if (!finFlag) break;
+
+        // Send message buffer
+        iResult = send(ConnectSocket, sendbuf, (int)strlen(sendbuf), 0);
+        if (iResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
+
+        printf("Message Sent: %s (%ld Bytes)\n", sendbuf, iResult);
+        // Log((char*) sendbuf);
     }
-    else if (ParsedAddress->sa_family == AF_INET6) {
-        RetAddress->address = (char*)malloc(INET6_ADDRSTRLEN * sizeof(char));
-        SOCKADDR_IN6* v6 = (SOCKADDR_IN6*)ParsedAddress;
-        inet_ntop(AF_INET6, &v6->sin6_addr, RetAddress->address, INET6_ADDRSTRLEN * sizeof(char));
-        RetAddress->port = ntohs(v6->sin6_port);
-        return RetAddress;
+
+    // shutdown the connection to prepare for program termination
+    iResult = shutdown(ConnectSocket, SD_BOTH);
+    if (iResult == SOCKET_ERROR) printf("shutdown failed with error: %d\n", WSAGetLastError());
+}
+
+void Receiver(SOCKET* ArgSocket) {
+    int iResult;
+    char recvbuf[DEFAULT_BUFLEN];
+    SOCKET ConnectSocket = *ArgSocket;
+    int recvbuflen = DEFAULT_BUFLEN;
+
+    // Receive until the peer closes the connection
+    ZeroMemory(recvbuf, sizeof(recvbuf));
+    while ((iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0)) > 0) {
+        if (iResult > 0) {
+            printf("\n");
+            printf("%s (%d Bytes)", recvbuf, iResult);
+            printf("\n");
+        }
+        ConsoleRefreshed = true;
     }
-    else return nullptr;
+
+    if (iResult < 0) printf("\trecv failed with error: %d\n", WSAGetLastError());
+
+    printf("Connection closed\n");
 }

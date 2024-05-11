@@ -18,6 +18,19 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ClientConfigs.hpp" />
+    <ClInclude Include="MBUtils.hpp" />
+    <ClInclude Include="MultiBriefingClient.hpp" />
+    <ClInclude Include="MultiBriefingTypes.hpp" />
+    <ClInclude Include="SystemDependency.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ClientAlpha.cpp" />
+    <ClCompile Include="ClientLaunch.cpp" />
+    <ClCompile Include="MBUtils.cpp" />
+    <ClCompile Include="MSClient.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -126,13 +139,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="ClientLaunch.cpp" />
-    <ClCompile Include="MSClient.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="MultiBriefingClient.hpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

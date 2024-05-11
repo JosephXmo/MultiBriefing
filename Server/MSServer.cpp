@@ -1,11 +1,14 @@
 ﻿#include "MultiBriefingServer.hpp"
 
+SOCKET ListenSocket = INVALID_SOCKET;
+
+bool LoopProceedFlag = true;
+
 int __cdecl MSServer(void)
 {
     WSADATA wsaData;
     int iResult;
 
-    SOCKET ListenSocket = INVALID_SOCKET;
     SOCKET ClientSocket = INVALID_SOCKET;
 
     struct addrinfo* result = NULL;
@@ -64,9 +67,9 @@ int __cdecl MSServer(void)
     printf("-------- MultiBriefing Server Initialization Success --------\n");
     printf("Waiting for client connection...\n\n");
 
-    do {
+    while (LoopProceedFlag) {
         // Server reaches maximum connection limit
-        if (ClientCounter == MAX_CONN) {
+        if (ClientsTable.counter == MAX_CONN) {
             CreateThread(
                 NULL, NULL,
                 (LPTHREAD_START_ROUTINE)FullConnectReject,
@@ -80,18 +83,17 @@ int __cdecl MSServer(void)
         // Accept a client socket
         SOCKADDR ClientAddress;
         ClientSocket = accept(ListenSocket, &ClientAddress, NULL);
-        if (ClientSocket == SOCKET_ERROR) {     // INVALID_SOCKET
-            // printf("accept failed with error: %d\n", WSAGetLastError());
-            // closesocket(ListenSocket);
-            // WSACleanup();
-            // return 1;
+        if (ClientSocket == SOCKET_ERROR || ClientSocket == INVALID_SOCKET) {
+             printf("accept failed with error: %d\n", WSAGetLastError());
             continue;
         }
-        ClientSockets[ClientCounter++] = ClientSocket;
+
+        // Fetch name from client
+        char* name = FetchName(ClientSocket);
 
         // Create MBClient Object
-        SYSTEMTIME CurrentTime; GetSystemTime(&CurrentTime);
-        MBClient Client{ GenRandByTime(), Client.socket = ClientSocket };
+        MBClient Client = { GenRandByTime(), name, Client.socket = ClientSocket };
+        RegisterClient(&ClientsTable, &Client);
 
         // Report client connection & information
         SOCKADDR TargetAddress;
@@ -100,8 +102,8 @@ int __cdecl MSServer(void)
             SimpleAddress* saTargetAddress = ResolveAddress(&TargetAddress);
 
             if (saTargetAddress != nullptr) {
-                printf("Client connection from: %s\n", saTargetAddress->address);
-                ReportClientCounter(ClientCounter);
+                printf("Client connection from: %s: %s\n", Client.name, saTargetAddress->address);
+                ReportClientCounter(ClientsTable.counter);
             }
             else printf("WARNING: Address version is neither v4 nor v6. Unidentified address family!\n");
         }
@@ -109,24 +111,15 @@ int __cdecl MSServer(void)
         // Create client handler thread
         CreateThread(
             NULL, NULL,
-            (LPTHREAD_START_ROUTINE)communication,
+            (LPTHREAD_START_ROUTINE)Communication,
             (LPVOID)&Client,
             NULL, NULL
         );
+
+        // Reset used local variable and report
+        ClientSocket = INVALID_SOCKET;
         printf("Waiting for client connection...\n\n");
-    } while (1);
-
-    // shutdown the connection since we're done
-    iResult = shutdown(ClientSocket, SD_SEND);
-    if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed with error: %d\n", WSAGetLastError());
-        closesocket(ClientSocket);
-        WSACleanup();
-        return 1;
     }
-
-    // cleanup
-    closesocket(ClientSocket);
 
     // Total cleanup
     // Attention that when performing a multi-client service, server needs to listen continuously.
@@ -147,41 +140,114 @@ int FullConnectReject(SOCKET ClientSocket) {
         return -1;
     }
 
+    int iResult = shutdown(ClientSocket, SD_BOTH);
+    closesocket(ClientSocket);
+
     return iSendResult;
 }
 
-void communication(MBClient* Client) {
-    int iResult, iSendResult;
+char* FetchName(SOCKET ClientSocket) {
+    int iResult;
+    char* namebuf = (char*)malloc((MAX_NAME + 1) * sizeof(char));
+    memset(namebuf, '\0', (MAX_NAME + 1) * sizeof(char));
+
+    iResult = recv(ClientSocket, namebuf, MAX_NAME, 0);
+    if (iResult > 0) {
+        // Echo name to client
+        int iSendResult = send(ClientSocket, namebuf, iResult, 0);
+        if (iSendResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
+    }
+    else {
+        int WSAErrorCode = WSAGetLastError();
+        if (WSAErrorCode == 10054)
+            printf("Client forced quitted.\n");
+        else
+            printf("Name recv failed with error: %d\n", WSAGetLastError());
+        closesocket(ClientSocket);
+        
+        strcpy_s(namebuf, 7 * sizeof(char), "UNKNOWN");
+    }
+
+    return namebuf;
+}
+
+int RegisterClient(MBClientsRegTable* ClientsTable, MBClient* newClient) {
+    for (int i = 0; i < MAX_CONN; i++) {
+        if (ClientsTable->table[i] == nullptr) {
+            ClientsTable->table[i] = newClient;
+            ClientsTable->counter++;
+
+            return ClientsTable->counter;
+        }
+    }
+
+    return -1;
+}
+
+int DeregisterClient(MBClientsRegTable* ClientsTable, MBClient* targetClient) {
+    for (int i = 0; i < MAX_CONN; i++) {
+        if (ClientsTable->table[i] == targetClient) {
+            // Pop-off from register table
+            ClientsTable->table[i] = nullptr;
+            ClientsTable->counter--;
+
+            // Release
+            // free(targetClient->name);
+            // free(targetClient);
+
+            return ClientsTable->counter;
+        }
+    }
+
+    return -1;
+}
+
+void Communication(MBClient* Client) {
+    int iResult, iSendResult = -1;
     char recvbuf[DEFAULT_BUFLEN];
-    int recvbuflen = DEFAULT_BUFLEN;
 
     // Receive until the peer shuts down the connection
     do {
         ZeroMemory(recvbuf, sizeof(recvbuf));
-        iResult = recv(Client->socket, recvbuf, recvbuflen, 0);
-        if (iResult > 0) {
-            printf("%ld: %s (%d Bytes)\n", Client->id, recvbuf, iResult);
+        iResult = recv(Client->socket, recvbuf, DEFAULT_BUFLEN, 0);
 
-            // Echo the buffer back to the sender
-            for (int i = 0; i < ClientCounter; i++) {
-                iSendResult = send(ClientSockets[i], recvbuf, iResult, 0);
-                if (iSendResult == SOCKET_ERROR) {
-                    printf("send failed with error: %d\n", WSAGetLastError());
-                    closesocket(Client->socket);
-                }
+        if (iResult > 0) {
+            printf("%s: %s (%d Bytes)\n", Client->name, recvbuf, iResult);
+
+            // Echo the buffer to all connected clients
+            for (int i = 0; i < MAX_CONN && ClientsTable.table[i] != nullptr; i++) {
+                if (ClientsTable.table[i]->id == Client->id) continue;
+
+                iSendResult = send(ClientsTable.table[i]->socket, recvbuf, iResult, 0);
+                if (iSendResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
             }
-            printf("Echoed %d Bytes to %d clients.\n\n", iSendResult, ClientCounter);
+            printf("Echoed %d Bytes to %d clients.\n\n", iSendResult, ClientsTable.counter);
         }
         else if (iResult == 0) {
             printf("Connection closing...\n");
-            ClientCounter--;
-            ReportClientCounter(ClientCounter);
+            DeregisterClient(&ClientsTable, Client);
+            ReportClientCounter(ClientsTable.counter);
         }
         else {
-            printf("recv failed with error: %d\n", WSAGetLastError());
+            int WSAErrorCode = WSAGetLastError();
+            if (WSAErrorCode == 10054)
+                printf("Client forced quitted.\n");
+            else
+                printf("recv failed with error: %d\n", WSAGetLastError());
             closesocket(Client->socket);
-            // TODO: Complete client list pop-off mechanism
-            ReportClientCounter(ClientCounter);
+            DeregisterClient(&ClientsTable, Client);
+            ReportClientCounter(ClientsTable.counter);
         }
     } while (iResult > 0);
+
+    // shutdown the connection since we're done
+    iResult = shutdown(Client->socket, SD_SEND);
+    if (iResult == SOCKET_ERROR) {
+        int WSAErrorCode = WSAGetLastError();
+        if (WSAErrorCode == 10038)
+            printf("Client forced quitted.\n");
+        else
+            printf("shutdown failed with error: %d\n", WSAGetLastError());
+    }
+    closesocket(Client->socket);
 }

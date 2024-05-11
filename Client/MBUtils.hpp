@@ -3,13 +3,8 @@
 #include "SystemDependency.hpp"
 #include "MultiBriefingTypes.hpp"
 
-struct SimpleAddress {
-	char* address;
-	short port;
-};
-
-void ReportClientCounter(int ClientCounter);
-
 SimpleAddress* ResolveAddress(SOCKADDR* ParsedAddress);
 
-long GenRandByTime();
+MBMessage ResolveMsg(MBClient sender, SYSTEMTIME time, char* msg);
+
+int Log(char* msg);

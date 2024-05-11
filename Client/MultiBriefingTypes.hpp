@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SystemDependency.hpp"
-#include "ServerConfigs.hpp"
+#include "ClientConfigs.hpp"
 
 struct MBClient {
 	long id;
@@ -10,14 +10,14 @@ struct MBClient {
 };
 
 struct MBMessage {
-	enum MsgType {COMMAND, TEXT};
+	enum MsgType { COMMAND, TEXT };
 	MBClient sender;
 	SYSTEMTIME timestamp;
 	MsgType type;
 	char* message;
 };
 
-struct MBClientsRegTable {
-	int counter = 0;
-	MBClient* table[MAX_CONN] = { nullptr };
+struct SimpleAddress {
+	char* address;
+	short port;
 };

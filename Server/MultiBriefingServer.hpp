@@ -13,12 +13,13 @@
 #define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000) 
 
 // Public variables
-int ClientCounter = 0;
-SOCKET ClientSockets[MAX_CONN];
+MBClientsRegTable ClientsTable;
 
 // Application Entrance
 int __cdecl main(void);
 
 // Functional process
 int FullConnectReject(SOCKET ClientCSocket);
-void communication(MBClient* Client);
+char* FetchName(SOCKET ClientSocket);
+int RegisterClient(MBClientsRegTable* ClientsTable, MBClient* newClient);
+void Communication(MBClient* Client);

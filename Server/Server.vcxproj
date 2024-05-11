@@ -19,18 +19,18 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MBUtils.cpp" />
-    <ClCompile Include="MSServer.cpp" />
-    <ClCompile Include="ServerLaunch.cpp" />
-    <ClCompile Include="SocketLinkedList.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="MBUtils.hpp" />
     <ClInclude Include="MultiBriefingServer.hpp" />
     <ClInclude Include="MultiBriefingTypes.hpp" />
     <ClInclude Include="ServerConfigs.hpp" />
     <ClInclude Include="SocketLinkedList.hpp" />
     <ClInclude Include="SystemDependency.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MBUtils.cpp" />
+    <ClCompile Include="MSServer.cpp" />
+    <ClCompile Include="ServerLaunch.cpp" />
+    <ClCompile Include="SocketLinkedList.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

@@ -15,16 +15,34 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ClientLaunch.cpp">
+    <ClInclude Include="MultiBriefingTypes.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemDependency.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientConfigs.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MBUtils.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiBriefingClient.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MBUtils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MSClient.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="MultiBriefingClient.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
+    <ClCompile Include="ClientAlpha.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientLaunch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
