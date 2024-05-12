@@ -1,9 +1,14 @@
+// Standard libraries
 #include <iostream>
 #include <string>
 
+// Win32 API libraries
 #include <winsock2.h>
 #include <windows.h>
+
 #pragma comment(lib, "Ws2_32.lib")
+
+// Port to connect
 #define DEFAULT_PORT 5019
 
 struct Message
@@ -20,82 +25,12 @@ struct ClientConfig
     int group_id;
 };
 
+// Socket where connection establish to
 SOCKET connect_sock;
 
-DWORD WINAPI receiveThread(LPVOID lpParam)
-{
-    Message msg;
-    int msg_len;
-    while (true)
-    {
-        msg_len = recv(connect_sock, (char*)&msg, sizeof(msg), 0);
-
-        if (msg_len == SOCKET_ERROR)
-        {
-            fprintf(stderr, "recv() failed with error %d\n", WSAGetLastError());
-            return 1;
-        }
-
-        if (msg_len == 0)
-        {
-            printf("Server closed connection\n");
-            return 0;
-        }
-        if (msg.text[0] == '\0')continue;
-        if ((int)msg.group_id == -1)
-            printf("[System]%s", msg.text);
-        else
-            printf("%s : %s\n", msg.username, msg.text);
-    }
-}
-
-DWORD WINAPI sendThread(LPVOID lpParam)
-{
-    ClientConfig* config = (ClientConfig*)lpParam;
-    Message msg;
-    strcpy(msg.username, config->username); // Copy the username into the struct
-    msg.group_id = config->group_id;        // Set the group_id
-    int msg_len;
-
-    // Autolly call info command when user is the first time to join in the chatroom
-    printf("[System]Hello %s! Welcome to our chatroom~\n", msg.username);
-    strcpy(msg.text, "/info");
-    send(connect_sock, (char*)&msg, sizeof(msg), 0);
-
-    while (true)
-    {
-        fgets(msg.text, sizeof(msg.text), stdin);
-        msg.text[strcspn(msg.text, "\n")] = 0; // Remove newline character
-
-        if (msg.text[0] == '\0')continue;
-
-        if (strcmp(msg.text, "/q") == 0)
-        {
-            printf("[System]Exiting...\n");
-            closesocket(connect_sock);
-            WSACleanup();
-            return 0;
-        }
-
-        if (strncmp(msg.text, "/change group ", 14) == 0)
-        {
-            int new_group_id = atoi(msg.text + 14);
-            if (new_group_id >= 1)
-                printf("[System]Group changed to %d\n", new_group_id);
-            else
-                printf("[System]Invalid group ID\n");
-            msg.group_id = new_group_id; // Change group ID
-            strcpy(msg.text, "\0");
-        }
-
-        msg_len = send(connect_sock, (char*)&msg, sizeof(msg), 0);
-        if (msg_len == SOCKET_ERROR)
-        {
-            fprintf(stderr, "send() failed with error %d\n", WSAGetLastError());
-            return 1;
-        }
-    }
-}
+// Transceiver threads
+DWORD WINAPI receiveThread(LPVOID lpParam);
+DWORD WINAPI sendThread(LPVOID lpParam);
 
 int main(int argc, char** argv)
 {
@@ -131,6 +66,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    // Configure socket
     memset(&server_addr, 0, sizeof(server_addr));
     memcpy(&(server_addr.sin_addr), hp->h_addr, hp->h_length);
     server_addr.sin_family = hp->h_addrtype;
@@ -144,6 +80,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    // Connect to server
     printf("Client connecting to: %s\n", hp->h_name);
     if (connect(connect_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
     {
@@ -152,8 +89,11 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    // Fetch name
     printf("Enter your username: ");
     scanf("%99s", config.username);
+
+    // Fetch target group
     config.group_id = 0;
     while (config.group_id <= 0)
     {
@@ -162,6 +102,8 @@ int main(int argc, char** argv)
     }
     // printf("Config you auto greeting when enter a group: ");
     // scanf("%99s", &config.greeting);
+
+    // Create transceiver thread
     HANDLE hSendThread = CreateThread(NULL, 0, sendThread, &config, 0, NULL);
     HANDLE hReceiveThread = CreateThread(NULL, 0, receiveThread, NULL, 0, NULL);
 
@@ -169,7 +111,91 @@ int main(int argc, char** argv)
     WaitForSingleObject(hSendThread, INFINITE);
     WaitForSingleObject(hReceiveThread, INFINITE);
 
+    // Clean ups
     closesocket(connect_sock);
     WSACleanup();
     return 0;
+}
+
+DWORD WINAPI receiveThread(LPVOID lpParam)
+{
+    Message msg;
+    int msg_len;
+    while (true)
+    {
+        msg_len = recv(connect_sock, (char*)&msg, sizeof(msg), 0);
+
+        // Socket error. Quit thread
+        if (msg_len == SOCKET_ERROR)
+        {
+            fprintf(stderr, "recv() failed with error %d\n", WSAGetLastError());
+            return 1;
+        }
+
+        // Connection end
+        if (msg_len == 0)
+        {
+            printf("Server closed connection\n");
+            return 0;
+        }
+
+        // Regular message output
+        if (msg.text[0] == '\0')continue;
+        if ((int)msg.group_id == -1)
+            printf("[System]%s", msg.text);
+        else
+            printf("%s : %s\n", msg.username, msg.text);
+    }
+}
+
+DWORD WINAPI sendThread(LPVOID lpParam)
+{
+    ClientConfig* config = (ClientConfig*)lpParam;
+    Message msg;
+    strcpy(msg.username, config->username); // Copy the username into the struct
+    msg.group_id = config->group_id;        // Set the group_id
+    int msg_len;
+
+    // Autolly call info command when user is the first time to join in the chatroom
+    printf("[System]Hello %s! Welcome to our chatroom~\n", msg.username);
+    strcpy(msg.text, "/info");
+    send(connect_sock, (char*)&msg, sizeof(msg), 0);
+
+    while (true)
+    {
+        fgets(msg.text, sizeof(msg.text), stdin);
+        msg.text[strcspn(msg.text, "\n")] = 0; // Remove newline character
+
+        if (msg.text[0] == '\0')continue;
+
+        // Command handling
+        // Quit
+        if (strcmp(msg.text, "/q") == 0)
+        {
+            printf("[System]Exiting...\n");
+            closesocket(connect_sock);
+            WSACleanup();
+            return 0;
+        }
+
+        // Change group
+        if (strncmp(msg.text, "/change group ", 14) == 0)
+        {
+            int new_group_id = atoi(msg.text + 14);
+            if (new_group_id >= 1)
+                printf("[System]Group changed to %d\n", new_group_id);
+            else
+                printf("[System]Invalid group ID\n");
+            msg.group_id = new_group_id; // Change group ID
+            strcpy(msg.text, "\0");
+        }
+
+        // Not a command. Send message
+        msg_len = send(connect_sock, (char*)&msg, sizeof(msg), 0);
+        if (msg_len == SOCKET_ERROR)
+        {
+            fprintf(stderr, "send() failed with error %d\n", WSAGetLastError());
+            return 1;
+        }
+    }
 }
