@@ -1,220 +1,175 @@
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-
 #include <iostream>
 #include <string>
-#include <limits>
-#include <windows.h>
+
 #include <winsock2.h>
-#include <ws2tcpip.h>
-#include <process.h>
+#include <windows.h>
+#pragma comment(lib, "Ws2_32.lib")
+#define DEFAULT_PORT 5019
 
-#pragma comment (lib, "Ws2_32.lib")
-
-using namespace std;
-
-#define BUFFER_LEN 1024
-#define NAME_LEN 20
-
-char name[NAME_LEN + 1]; // client's name
-
-// Mutex for controlling send operation
-HANDLE send_mutex;
-
-// receive message and print out
-unsigned __stdcall handle_recv(void* data)
+struct Message
 {
-    SOCKET client_sock = *((SOCKET*)data);
+    char username[100];
+    char text[512];
+    int group_id;
+};
 
-    // message buffer
-    char buffer[BUFFER_LEN + 1];
-    int buffer_len = 0;
-
-    // receive
-    while ((buffer_len = recv(client_sock, buffer, BUFFER_LEN, 0)) > 0)
-    {
-        buffer[buffer_len] = '\0'; // Null-terminate the received data
-        cout << buffer << endl;    // Print out the received message
-    }
-
-    // If recv returns 0 or SOCKET_ERROR, it indicates that the server has been shut down or there was an error
-    if (buffer_len == 0)
-    {
-        printf("The Server has been shutdown!\n");
-    }
-    else if (buffer_len == SOCKET_ERROR)
-    {
-        perror("recv");
-    }
-
-    return 0;
-}
-
-// Send message
-void send_message(SOCKET client_sock)
+struct ClientConfig
 {
-    // Lock the mutex before sending
-    WaitForSingleObject(send_mutex, INFINITE);
+    char username[100];
+    // char greeting[100];
+    int group_id;
+};
 
-    // Get message from user
-    char message[BUFFER_LEN + 1];
-    cin.getline(message, BUFFER_LEN);
+SOCKET connect_sock;
 
-    // Send message to server
-    if (send(client_sock, message, strlen(message), 0) < 0)
-    {
-        perror("send");
-    }
-
-    // Unlock the mutex after sending
-    ReleaseMutex(send_mutex);
-}
-
-int main()
+DWORD WINAPI receiveThread(LPVOID lpParam)
 {
-    WSADATA wsaData;
-    SOCKET client_sock;
-
-    struct addrinfo* result = NULL, * ptr = NULL, hints;
-
-    // Initialize Winsock
-    int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (result != 0)
+    Message msg;
+    int msg_len;
+    while (true)
     {
-        printf("WSAStartup failed: %d\n", result);
-        return 1;
-    }
+        msg_len = recv(connect_sock, (char*)&msg, sizeof(msg), 0);
 
-    // Get IP address and port of the server and connect
-    int server_port = 0;
-    char server_ip[16] = { 0 };
-
-    printf("Please enter IP address of the server: ");
-    scanf("%s", server_ip);
-    printf("Please enter port number of the server: ");
-    scanf("%d", &server_port);
-    getchar(); // Read useless '\n'
-
-    // Resolve the server address and port
-    ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-
-    char server_port_str[5];
-    _itoa(server_port, server_port_str, 10);
-
-    iResult = getaddrinfo(server_ip, server_port_str, &hints, &result);
-    if (iResult != 0) {
-        printf("getaddrinfo failed with error: %d\n", iResult);
-        WSACleanup();
-        return 1;
-    }
-
-    for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
-        // Create a socket to connect with the server
-        client_sock = socket(
-            ptr->ai_family,
-            ptr->ai_socktype,
-            ptr->ai_protocol
-        );
-
-        if (client_sock == INVALID_SOCKET) {
-            printf("socket failed with error: %ld\n", WSAGetLastError());
-            WSACleanup();
+        if (msg_len == SOCKET_ERROR)
+        {
+            fprintf(stderr, "recv() failed with error %d\n", WSAGetLastError());
             return 1;
         }
 
-        // Connect to the server
-        if (connect(client_sock, ptr->ai_addr, ptr->ai_addrlen) == SOCKET_ERROR)
+        if (msg_len == 0)
         {
-            perror("connect");
-            continue;
+            printf("Server closed connection\n");
+            return 0;
         }
-        break;
+        if (msg.text[0] == '\0')continue;
+        if ((int)msg.group_id == -1)
+            printf("[System]%s", msg.text);
+        else
+            printf("%s : %s\n", msg.username, msg.text);
     }
+}
 
-    // Check state
-    printf("Connecting......");
-    fflush(stdout);
-    char state[10] = { 0 };
-    if (recv(client_sock, state, sizeof(state), 0) < 0)
+DWORD WINAPI sendThread(LPVOID lpParam)
+{
+    ClientConfig* config = (ClientConfig*)lpParam;
+    Message msg;
+    strcpy(msg.username, config->username); // Copy the username into the struct
+    msg.group_id = config->group_id;        // Set the group_id
+    int msg_len;
+
+    // Autolly call info command when user is the first time to join in the chatroom
+    printf("[System]Hello %s! Welcome to our chatroom~\n", msg.username);
+    strcpy(msg.text, "/info");
+    send(connect_sock, (char*)&msg, sizeof(msg), 0);
+
+    while (true)
     {
-        perror("recv");
+        fgets(msg.text, sizeof(msg.text), stdin);
+        msg.text[strcspn(msg.text, "\n")] = 0; // Remove newline character
+
+        if (msg.text[0] == '\0')continue;
+
+        if (strcmp(msg.text, "/q") == 0)
+        {
+            printf("[System]Exiting...\n");
+            closesocket(connect_sock);
+            WSACleanup();
+            return 0;
+        }
+
+        if (strncmp(msg.text, "/change group ", 14) == 0)
+        {
+            int new_group_id = atoi(msg.text + 14);
+            if (new_group_id >= 1)
+                printf("[System]Group changed to %d\n", new_group_id);
+            else
+                printf("[System]Invalid group ID\n");
+            msg.group_id = new_group_id; // Change group ID
+            strcpy(msg.text, "\0");
+        }
+
+        msg_len = send(connect_sock, (char*)&msg, sizeof(msg), 0);
+        if (msg_len == SOCKET_ERROR)
+        {
+            fprintf(stderr, "send() failed with error %d\n", WSAGetLastError());
+            return 1;
+        }
+    }
+}
+
+int main(int argc, char** argv)
+{
+    WSADATA wsaData;
+    struct sockaddr_in server_addr;
+    struct hostent* hp;
+    char server_name[] = "localhost";
+    unsigned short port = DEFAULT_PORT;
+    unsigned int addr;
+
+    ClientConfig config;
+
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+    {
+        fprintf(stderr, "WSAStartup failed with error %d\n", WSAGetLastError());
         return -1;
     }
-    if (strcmp(state, "OK"))
+
+    if (isalpha(server_name[0]))
     {
-        printf("\rThe chatroom is already full!\n");
-        return 0;
+        hp = gethostbyname(server_name);
     }
     else
     {
-        printf("\rConnect Successfully!\n");
+        addr = inet_addr(server_name);
+        hp = gethostbyaddr((char*)&addr, 4, AF_INET);
     }
 
-    // Get client name
-    printf("Welcome to Use Multi-Person Chat room!\n");
-    while (1)
+    if (hp == NULL)
     {
-        printf("Please enter your name: ");
-        cin.get(name, NAME_LEN);
-        int name_len = strlen(name);
-        // No input
-        if (cin.eof())
-        {
-            // Reset
-            cin.clear();
-            clearerr(stdin);
-            printf("\nYou need to input at least one word!\n");
-            continue;
-        }
-        // Single enter
-        else if (name_len == 0)
-        {
-            // Reset
-            cin.clear();
-            clearerr(stdin);
-            cin.get();
-            continue;
-            printf("\nYou need to input at least one word!\n");
-        }
-        // Overflow
-        if (name_len > NAME_LEN - 2)
-        {
-            // Reset
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            printf("\nReached the upper limit of the words!\n");
-            continue;
-        }
-        cin.get(); // Remove '\n' in stdin
-        name[name_len] = '\0';
-        break;
-    }
-    if (send(client_sock, name, strlen(name), 0) < 0)
-    {
-        perror("send");
+        fprintf(stderr, "Cannot resolve address: %d\n", WSAGetLastError());
+        WSACleanup();
         return -1;
     }
 
-    // Create mutex for send operation
-    send_mutex = CreateMutex(NULL, FALSE, NULL);
+    memset(&server_addr, 0, sizeof(server_addr));
+    memcpy(&(server_addr.sin_addr), hp->h_addr, hp->h_length);
+    server_addr.sin_family = hp->h_addrtype;
+    server_addr.sin_port = htons(port);
 
-    // Create a new thread to handle receive message
-    HANDLE recv_thread;
-    unsigned threadID;
-    recv_thread = (HANDLE)_beginthreadex(NULL, 0, handle_recv, &client_sock, 0, &threadID);
-
-    // Get message and send
-    while (1)
+    connect_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (connect_sock == INVALID_SOCKET)
     {
-        send_message(client_sock);
+        fprintf(stderr, "socket() failed with error %d\n", WSAGetLastError());
+        WSACleanup();
+        return -1;
     }
 
-    // Close thread and socket
-    CloseHandle(recv_thread);
-    shutdown(client_sock, 2);
+    printf("Client connecting to: %s\n", hp->h_name);
+    if (connect(connect_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
+    {
+        fprintf(stderr, "connect() failed with error %d\n", WSAGetLastError());
+        WSACleanup();
+        return -1;
+    }
+
+    printf("Enter your username: ");
+    scanf("%99s", config.username);
+    config.group_id = 0;
+    while (config.group_id <= 0)
+    {
+        printf("Enter your group_id(>=1): ");
+        scanf("%d", &config.group_id);
+    }
+    // printf("Config you auto greeting when enter a group: ");
+    // scanf("%99s", &config.greeting);
+    HANDLE hSendThread = CreateThread(NULL, 0, sendThread, &config, 0, NULL);
+    HANDLE hReceiveThread = CreateThread(NULL, 0, receiveThread, NULL, 0, NULL);
+
+    // Wait for the send thread to finish (or receive thread, depending on design)
+    WaitForSingleObject(hSendThread, INFINITE);
+    WaitForSingleObject(hReceiveThread, INFINITE);
+
+    closesocket(connect_sock);
     WSACleanup();
     return 0;
 }

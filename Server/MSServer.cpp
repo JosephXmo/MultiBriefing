@@ -116,6 +116,21 @@ int __cdecl MSServer(void)
 			}
 			else printf("WARNING: Address version is neither v4 nor v6. Unidentified address family!\n");
 		}
+		else {
+			// Not only is name not successfully fetched, socket is closed or error. 
+			// Prompt, Deregister, Continue loop
+			printf_s("Socket error. Client connection failed.\n");
+			DeregisterClient(&ClientsTable, Client);
+			ReportClientCounter(ClientsTable.counter);
+
+			// Reset used local variable and report
+			ClientSocket = INVALID_SOCKET;
+			Client = nullptr;
+
+			printf("Waiting for client connection...\n\n");
+
+			continue;
+		}
 
 		// Create client handler thread
 		CreateThread(
@@ -161,7 +176,7 @@ int FullConnectReject(SOCKET ClientSocket) {
 char* FetchName(SOCKET ClientSocket) {
 	int iResult;
 	char* namebuf = (char*)malloc((MAX_NAME + 1) * sizeof(char));
-	memset(namebuf, '\0', (MAX_NAME + 1) * sizeof(char));
+	memset(namebuf, '\0', sizeof(namebuf));
 
 	iResult = recv(ClientSocket, namebuf, MAX_NAME, 0);
 	if (iResult > 0) {
@@ -177,7 +192,7 @@ char* FetchName(SOCKET ClientSocket) {
 			printf("Name recv failed with error: %d\n", WSAGetLastError());
 		closesocket(ClientSocket);
 
-		strcpy_s(namebuf, 7 * sizeof(char), "UNKNOWN");
+		strcpy_s(namebuf, 8 * sizeof(char), "UNKNOWN");
 	}
 
 	return namebuf;
@@ -205,7 +220,7 @@ int DeregisterClient(MBClientsRegTable* ClientsTable, MBClient* targetClient) {
 
 			// Release
 			// free(targetClient->name);
-			// free(targetClient);
+			free(targetClient);
 
 			return ClientsTable->counter;
 		}
@@ -257,10 +272,14 @@ void Communication(MBClient* Client) {
 				printf("Client forced quitted.\n");
 			else
 				printf("recv failed with error: %d\n", WSAGetLastError());
+
+			// Client post-process
 			closesocket(Client->socket);
+			char tempname[MAX_NAME];
+			strcpy_s(tempname, Client->name);
 			DeregisterClient(&ClientsTable, Client);
 			char AnnounceMsg[DEFAULT_BUFLEN];
-			sprintf_s(AnnounceMsg, "%s left this chat.\n", Client->name);
+			sprintf_s(AnnounceMsg, "%s left this chat.\n", tempname);
 			Announcement(&ClientsTable, AnnounceMsg);
 			ReportClientCounter(ClientsTable.counter);
 			return;
@@ -276,10 +295,14 @@ void Communication(MBClient* Client) {
 		else
 			printf("shutdown failed with error: %d\n", WSAGetLastError());
 	}
+
+	// Client post-process
 	closesocket(Client->socket);
+	char tempname[MAX_NAME];
+	strcpy_s(tempname, Client->name);
 	DeregisterClient(&ClientsTable, Client);
 	char AnnounceMsg[DEFAULT_BUFLEN];
-	sprintf_s(AnnounceMsg, "%s left this chat.\n", Client->name);
+	sprintf_s(AnnounceMsg, "%s left this chat.\n", tempname);
 	Announcement(&ClientsTable, AnnounceMsg);
 	ReportClientCounter(ClientsTable.counter);
 }
