@@ -1,5 +1,61 @@
 #include "MBUtils.hpp"
 
+char* FetchName(SOCKET ClientSocket) {
+    int iResult;
+    char* namebuf = (char*)malloc((MAX_NAME + 1) * sizeof(char));
+    memset(namebuf, '\0', sizeof(namebuf));
+
+    iResult = recv(ClientSocket, namebuf, MAX_NAME, 0);
+    if (iResult > 0) {
+        // Echo name to client
+        int iSendResult = send(ClientSocket, namebuf, iResult, 0);
+        if (iSendResult == SOCKET_ERROR) printf("send failed with error: %d\n", WSAGetLastError());
+    }
+    else {
+        int WSAErrorCode = WSAGetLastError();
+        if (WSAErrorCode == 10054)
+            printf("Client forced quitted.\n");
+        else
+            printf("Name recv failed with error: %d\n", WSAGetLastError());
+        closesocket(ClientSocket);
+
+        strcpy_s(namebuf, 8 * sizeof(char), "UNKNOWN");
+    }
+
+    return namebuf;
+}
+
+int RegisterClient(MBClientsRegTable* ClientsTable, MBClient* newClient) {
+    for (int i = 0; i < MAX_CONN; i++) {
+        if (ClientsTable->table[i] == nullptr) {
+            ClientsTable->table[i] = newClient;
+            ClientsTable->counter++;
+
+            return ClientsTable->counter;
+        }
+    }
+
+    return -1;
+}
+
+int DeregisterClient(MBClientsRegTable* ClientsTable, MBClient* targetClient) {
+    for (int i = 0; i < MAX_CONN; i++) {
+        if (ClientsTable->table[i] == targetClient) {
+            // Pop-off from register table
+            ClientsTable->table[i] = nullptr;
+            ClientsTable->counter--;
+
+            // Release
+            free(targetClient->name);
+            free(targetClient);
+
+            return ClientsTable->counter;
+        }
+    }
+
+    return -1;
+}
+
 void ReportClientCounter(int ClientCounter) {
     printf("\tTotal connections: %d\n\n", ClientCounter);
 }

@@ -20,7 +20,4 @@ int __cdecl main(void);
 
 // Functional process
 int FullConnectReject(SOCKET ClientCSocket);
-char* FetchName(SOCKET ClientSocket);
-int RegisterClient(MBClientsRegTable* ClientsTable, MBClient* newClient);
-int DeregisterClient(MBClientsRegTable* ClientsTable, MBClient* targetClient);
 void Communication(MBClient* Client);
