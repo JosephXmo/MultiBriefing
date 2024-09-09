@@ -19,5 +19,6 @@ MBClientsRegTable ClientsTable;
 int __cdecl main(void);
 
 // Functional process
+void firstLicensePrompt();
 int FullConnectReject(SOCKET ClientCSocket);
 void Communication(MBClient* Client);
