@@ -28,7 +28,6 @@
 #include "ServerConfigs.hpp"
 
 // Include utilities
-#include "SocketLinkedList.hpp"
 #include "MBUtils.hpp"
 #define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000) 
 
