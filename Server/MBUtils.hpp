@@ -1,6 +1,6 @@
 /*
      MultiBriefing Communicator - An experimental program implementing chat over IP, and more.
-     Copyright (C) 2024  Sibo Qiu, Runjie Miao, Yucheng Tong, and ? ?
+     Copyright (C) 2024  Sibo Qiu, Runjie Miao, Yucheng Tong, and Menghan Wang
 
      This program is free software: you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published by

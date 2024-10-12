@@ -1,6 +1,6 @@
 /*
      MultiBriefing Communicator - An experimental program implementing chat over IP, and more.
-     Copyright (C) 2024  Sibo Qiu, Runjie Miao, Yucheng Tong, and ? ?
+     Copyright (C) 2024  Sibo Qiu, Runjie Miao, Yucheng Tong, and Menghan Wang
 
      This program is free software: you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published by
@@ -272,6 +272,9 @@ void Communication(MBClient* Client) {
 }
 
 void firstLicensePrompt() {
-    const char info[290] = "\n\tMultiBriefing Communicators  Copyright (C) 2024  Sibo Qiu, Runjie Miao, Yucheng Tong, and ? ?\n\tThis program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.\n\tThis is free software, and you are welcome to redistribute it\n\tunder certain conditions; type `show c' for details.\n";
-    std::cout << info << std::endl;
+    std::cout << R"(
+	MultiBriefing Communicators  Copyright (C) 2024  Sibo Qiu, Runjie Miao, Yucheng Tong, and Menghan Wang
+	This program comes with ABSOLUTELY NO WARRANTY.
+	This is free software, and you are welcome to redistribute it under certain conditions of GNU GPL.
+)" << std::endl;
 }

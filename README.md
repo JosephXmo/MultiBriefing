@@ -10,6 +10,8 @@ Server is capable of grouping clients from lobby, via console commands.
 In future, we might implement a TUI by rendering console buffer. 
 Portability will limit the function completeness.
 
+Team co-operators: Sibo Qiu, Runjie Miao, Yucheng Tong, and Menghan Wang
+
 
 Reference Webpages:
 
