@@ -1,6 +1,12 @@
 # MultiBriefing Project
 ### A Homebrew Chat Program Based on TCP with Win32, Extended from UIC-COMP3003 Assignment 2
 
+-----
+
+**THIS REPOSITORY IS ARCHIVED, NO LONGER MAINTAIN AND ITERATE IN THIS REPOSITORY. PLEASE CHECK IF `MultiBriefing NG` IS AVAILBALE.**
+
+-----
+
 A simple console chat program using TCP protocol, implemented with Win32 API.
 Joseph wants to port this app to Linux and macOS but he don't have any time.
 
