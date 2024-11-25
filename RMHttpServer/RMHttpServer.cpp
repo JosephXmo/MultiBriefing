@@ -106,7 +106,7 @@ int main()
 	do {
 		std::cin >> command;
 		if (command != "quit")
-			std::cout << "No" << std::endl;
+			std::cout << "No such command" << std::endl;
 	} while (command != "quit");
 
 	tcpServer->running = false;
