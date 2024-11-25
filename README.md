@@ -1,7 +1,6 @@
 # RMHttpServer
 ### A Homebrew HTTP server program based on Win32 WinSock 2 TCP, Extended from UIC-COMP4093 Assignment 2
 
----
 
 ## How to build?
 
