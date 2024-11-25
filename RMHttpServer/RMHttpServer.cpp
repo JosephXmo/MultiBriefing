@@ -12,7 +12,11 @@ int main()
 
 	// Easy pre-configured mode?
 	std::string inbuf;
-	std::cout << "Are you a teacher or TA who is testing & scoring this project? (y/n) ";
+	std::cout << "Are you a teacher or TA who is testing & scoring this project?" << std::endl;
+	std::cout << "Press \'Y\' to operate in a pre-configured path of web root path." << std::endl;
+	std::cout << "It is notices that pre-configuration does not always work as expected." << std::endl;
+	std::cout << "You can define your custom web root path and log path by pressing \'N\'." << std::endl;
+	std::cout << "(y/N)? ";
 	std::getline(std::cin, inbuf);
 
 	// !
