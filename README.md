@@ -12,11 +12,11 @@ However, it doesn't always start up server correctly. You still need to run it m
 If you customized your cmake installation path, you may need to make the program by yourself.
 In that case, you **MUST** make sure the executable is at the location of:
 
-	`<root>\src\build\Release`
+	<root>\src\build\Release
 
 which means, the program's path is:
 
-	`<root>\src\build\Release\RMHttpServer.exe`
+	<root>\src\build\Release\RMHttpServer.exe
 
 Also, you are **HIGHLY RECOMMENDED** to run as Administrator.
 Otherwise, some files may not be created as expected.
