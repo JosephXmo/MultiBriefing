@@ -1,51 +1,25 @@
-# MultiBriefing Project
-### A Homebrew Chat Program Based on TCP with Win32, Extended from UIC-COMP3003 Assignment 2
-
------
-
-**THIS REPOSITORY IS ARCHIVED, NO LONGER MAINTAIN AND ITERATE IN THIS REPOSITORY. PLEASE CHECK IF `MultiBriefing NG` IS AVAILBALE.**
-
------
-
-A simple console chat program using TCP protocol, implemented with Win32 API.
-Someone wants to port this app to Linux and macOS but he doesn't have any time.
-
-Clients can choose to join specific group when they connect to server.
-Server is capable of grouping clients via console commands.
-
-Team co-operators: Sibo Qiu, Runjie Miao, Yucheng Tong, and Menghan Wang
+# RMHttpServer
+### A Homebrew HTTP server program based on Win32 WinSock 2 TCP, Extended from UIC-COMP4093 Assignment 2
 
 
-Reference Webpages:
+## How to build?
 
-https://blog.csdn.net/ap1005834/article/details/127091142
+If your Visual Studio is installed on `C:\` default location, simply run `automake.bat`.
+The script will automatically make the program using Visual Studio Developer Prompt.
+However, it doesn't always start up server correctly. You still need to run it manually sometimes.
 
-https://blog.csdn.net/m0_48660921/article/details/122382490
+If you customized your cmake installation path, you may need to make the program by yourself.
+In that case, you **MUST** make sure the executable is at the location of:
 
-https://blog.csdn.net/sinat_21107433/article/details/80869887
+	<root>\src\build\Release
 
-https://blog.csdn.net/qq1113673178/article/details/132178553
+which means, the program's path is:
 
-https://blog.csdn.net/m0_65544927/article/details/134001816
+	<root>\src\build\Release\RMHttpServer.exe
 
-https://learn.microsoft.com/zh-cn/windows/console/console-screen-buffers
+Also, you are **HIGHLY RECOMMENDED** to run as Administrator.
+Otherwise, some files may not be created as expected.
 
-https://www.cnblogs.com/MakeView660/p/9237990.html
 
-Windows provides Windows Socket API (a.k.a. WSA), Winsock, has 2 versions currently: WinSock 1.1 and WinSock 2.0
-
-WinSock 1.1 and WinSock 2.0 are backward-compatible: both source code and binary code.
-WinSock 2.0 is the extension of WinSock 1.1, including adding more asynchronized functions.
-These extensions are for Windows programming, for example, making async I/O with Event Notification;
-while WinSock 1.1 was ported from UNIX BSD socket.
-
-To use WinSock 2, programmers simply need to include new header `WinSock2.h` and link `Ws2_32.lib` as below:
-```C++
-　　// WinSock1.1:
-　　#include <winsock.h> 
-　　#pragma comment(lib, "wsock32.lib")
-
-　　// WinSock2.0:
-　　#include <winsock2.h>
-　　#pragma comment(lib, "ws2_32.lib")
-```
+Program is built on Windows Socket 2, which means this program cannot be ported to any other platform,
+even I chose CMake as compile platform.
