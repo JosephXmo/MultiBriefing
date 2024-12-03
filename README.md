@@ -8,13 +8,12 @@
 -----
 
 A simple console chat program using TCP protocol, implemented with Win32 API.
-Joseph wants to port this app to Linux and macOS but he don't have any time.
+Someone wants to port this app to Linux and macOS but he doesn't have any time.
 
-Clients defaultly join lobby group when they first connect to server.
-Server is capable of grouping clients from lobby, via console commands.
+Clients can choose to join specific group when they connect to server.
+Server is capable of grouping clients via console commands.
 
-In future, we might implement a TUI by rendering console buffer. 
-Portability will limit the function completeness.
+Team co-operators: Sibo Qiu, Runjie Miao, Yucheng Tong, and Menghan Wang
 
 
 Reference Webpages:
